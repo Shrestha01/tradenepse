@@ -109,7 +109,7 @@ export const users = pgTable("users", {
 
 // 2. PORTFOLIO TABLE (Linked to User)
 export const portfolio = pgTable("portfolio", {
-  id: uuid("id"),
+  id: serial("id").primaryKey(),
 
   // This connects the stock to a specific person
   // For now, you can hardcode a 'guest' string or a specific UUID
@@ -125,6 +125,7 @@ export const portfolio = pgTable("portfolio", {
     precision: 15,
     scale: 2,
   }).notNull(),
+  type: text("type").notNull().default("BUY"), // 'BUY' or 'SELL'
 
   purchaseDate: date("purchase_date").notNull(),
   createdAt: timestamp("created_at").defaultNow(),

@@ -14,6 +14,23 @@ export default function AddStockForm() {
       }}
       className="flex flex-wrap gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800"
     >
+      <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 mb-4">
+        <label className="flex-1 text-center cursor-pointer py-2 rounded-lg has-[:checked]:bg-blue-600 transition-all">
+          <input
+            type="radio"
+            name="type"
+            value="BUY"
+            defaultChecked
+            className="hidden"
+          />
+          <span className="text-sm font-bold">BUY</span>
+        </label>
+        <label className="flex-1 text-center cursor-pointer py-2 rounded-lg has-[:checked]:bg-red-600 transition-all">
+          <input type="radio" name="type" value="SELL" className="hidden" />
+          <span className="text-sm font-bold">SELL</span>
+        </label>
+      </div>
+
       <input
         name="symbol"
         placeholder="Symbol (NICA)"
