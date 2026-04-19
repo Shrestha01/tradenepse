@@ -7,6 +7,7 @@ import {
   date,
   timestamp,
   uniqueIndex,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 export const floorsheet = pgTable(
@@ -94,3 +95,37 @@ export const marketPrices = pgTable(
     ),
   }),
 );
+
+// ***********************************************
+// SCHEMA FOR STORING PROTFOLIO DATA
+
+// 1. USERS TABLE (Future Proofing)
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(), // UUID is better for security than serial
+  fullName: text("full_name").notNull(),
+  email: text("email").unique().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// 2. PORTFOLIO TABLE (Linked to User)
+export const portfolio = pgTable("portfolio", {
+  id: uuid("id"),
+
+  // This connects the stock to a specific person
+  // For now, you can hardcode a 'guest' string or a specific UUID
+  userId: text("user_id").notNull(),
+
+  symbol: text("symbol").notNull(),
+  quantity: integer("quantity").notNull(),
+  avgCostPrice: numeric("avg_cost_price", {
+    precision: 12,
+    scale: 2,
+  }).notNull(),
+  totalInvestment: numeric("total_investment", {
+    precision: 15,
+    scale: 2,
+  }).notNull(),
+
+  purchaseDate: date("purchase_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
