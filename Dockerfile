@@ -1,5 +1,6 @@
 # Use the correct Playwright image
 FROM ://microsoft.com
+
 WORKDIR /app
 
 # Install dependencies
