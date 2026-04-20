@@ -1,16 +1,13 @@
-# 1. Use a pre-made image that already has Chrome/Playwright installed
+# Ensure this is line 1 or 2 of your Dockerfile
 FROM ://microsoft.com
 
 WORKDIR /app
 
-# 2. Install your project's tools
+# The rest of your Dockerfile...
 COPY package*.json ./
 RUN npm install
-
-# 3. Copy your code and build it
 COPY . .
 RUN npm run build
 
-# 4. Start the app
 EXPOSE 3000
 CMD ["npm", "start"]
