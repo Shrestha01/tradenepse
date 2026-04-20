@@ -1,4 +1,4 @@
-FROM ://microsoft.com
+FROM microsoft.com
 WORKDIR /app
 
 COPY package*.json ./
