@@ -1,6 +1,5 @@
 # Use the correct Playwright image
 FROM ://microsoft.com
-
 WORKDIR /app
 
 # Install dependencies
@@ -14,5 +13,5 @@ COPY . .
 RUN npm run build
 
 # Start the app
-EXPOSE 3000
+EXPOSE 10000
 CMD ["npm", "start"]
