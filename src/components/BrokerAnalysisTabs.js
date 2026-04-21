@@ -24,7 +24,7 @@ export default function BrokerAnalysisTabs({ buyers, sellers, symbol }) {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mt-8 ">
       {/* Toggle Buttons */}
       <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 w-full max-w-sm mx-auto">
         <button

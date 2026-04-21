@@ -14,8 +14,8 @@ export default function AddStockForm() {
       }}
       className="flex flex-wrap gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800"
     >
-      <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 mb-4">
-        <label className="flex-1 text-center cursor-pointer py-2 rounded-lg has-[:checked]:bg-blue-600 transition-all">
+      <div className="flex bg-slate-950   px-2 border border-slate-700 mb-4">
+        <label className="flex-1 text-center cursor-pointer py-4  px-2 rounded-lg has-checked:bg-blue-600 transition-all">
           <input
             type="radio"
             name="type"
@@ -23,11 +23,11 @@ export default function AddStockForm() {
             defaultChecked
             className="hidden"
           />
-          <span className="text-sm font-bold">BUY</span>
+          <span className="text-md font-bold">BUY</span>
         </label>
-        <label className="flex-1 text-center cursor-pointer py-2 rounded-lg has-[:checked]:bg-red-600 transition-all">
+        <label className="flex-1 text-center cursor-pointer py-4 rounded-lg has-checked:bg-red-600 transition-all">
           <input type="radio" name="type" value="SELL" className="hidden" />
-          <span className="text-sm font-bold">SELL</span>
+          <span className="text-md font-bold">SELL</span>
         </label>
       </div>
 
@@ -62,7 +62,7 @@ export default function AddStockForm() {
       <button
         type="submit"
         disabled={loading}
-        className="bg-blue-600 px-6 py-2 rounded font-bold hover:bg-blue-700"
+        className="bg-blue-600 px-6 py-2 cursor-pointer rounded font-bold hover:bg-blue-700"
       >
         {loading ? "Adding..." : "Add Stock"}
       </button>

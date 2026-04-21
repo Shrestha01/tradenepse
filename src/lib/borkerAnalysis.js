@@ -1,7 +1,7 @@
 // src/lib/brokerAnalysis.js
 import { db } from "@/db";
-import { floorsheet } from "@/db/schema";
-import { eq, sql, and } from "drizzle-orm";
+import { floorsheet, marketPrices } from "@/db/schema";
+import { eq, sql, and, desc } from "drizzle-orm";
 
 export async function getBrokerStats(symbol) {
   const buyers = await db
@@ -29,4 +29,23 @@ export async function getBrokerStats(symbol) {
     .limit(10);
 
   return { buyers, sellers };
+}
+export async function getStockDetails(symbol) {
+  // DEBUG: If this logs 'undefined', the query WILL fail
+  console.log("Check column:", marketPrices.lastUpdated);
+
+  const result = await db
+    .select()
+    .from(marketPrices)
+    .where(
+      and(
+        eq(marketPrices.symbol, symbol),
+        eq(marketPrices.businessDate, sql`CURRENT_DATE`),
+      ),
+    )
+    .orderBy(desc(marketPrices.lastUpdated)) // Ensure this matches your schema file exactly
+    .limit(1);
+
+  // Return the first object directly, or null if nothing found
+  return result.length > 0 ? result[0] : null;
 }

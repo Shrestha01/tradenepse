@@ -64,7 +64,7 @@ export async function scrapeFloorsheet() {
     }
 
     let pageCount = 1;
-    const MAX_PAGES = 200;
+    const MAX_PAGES = 500;
     let totalSaved = 0;
 
     while (pageCount <= MAX_PAGES) {
