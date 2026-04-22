@@ -145,18 +145,21 @@ export async function scrapeFloorsheet() {
 //****************************************************** */
 // FUNCTION TO SCRAPE TODAYS PRICE FROM NEPSE WEBSITE AND SAVE TO THE PROSTGRESQL DATABASE
 export async function scrapeTodayPrice() {
-  const browser = await chromium.launch({
-    headless: true,
-    args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
-  });
 
+  // LUNCHING A BROWSER IN THE SERVER
+  const browser = await chromium.launch({
+    headless: true,            // helps to run the browser on server without a proper GUI.
+    args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"], // helps to behave like a Human when accessing a web-application by seting a flag as false to navigator.webdriver(normally this is true)
+  });
+  // CREATE A FRESH, ISOLATED WEB BROWSWER PROFILE.
   const context = await browser.newContext({
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   });
 
+  // OPENING A NEW TAB INSIDE THE BROWSWER.
   const page = await context.newPage();
-
+  
   const log = (step, message, isError = false) => {
     const timestamp = new Date().toLocaleTimeString();
     const prefix = isError ? "❌ [ERROR]" : "✅ [INFO]";
