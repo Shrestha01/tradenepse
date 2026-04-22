@@ -8,30 +8,51 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  check,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
-export const floorsheet = pgTable(
-  "floorsheet",
-  {
-    id: serial("id").primaryKey(),
-    // Must be text to handle long NEPSE IDs
-    contractId: text("contract_id").notNull(),
-    floorDate: date("floor_date").notNull(),
-    symbol: text("symbol").notNull(),
-    buyerBroker: integer("buyer_broker").notNull(),
-    sellerBroker: integer("seller_broker").notNull(),
-    quantity: integer("quantity").notNull(),
-    // Use text or numeric; Drizzle handles strings for numeric types
-    rate: numeric("rate", { precision: 12, scale: 2 }).notNull(),
-    amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (table) => ({
-    contractIdx: uniqueIndex("contract_idx").on(table.contractId),
-  }),
-);
+/** 1.
+ * COMPANIES TABLE
+ * Stores data from: https://nepalstock.com.np
+ * Note: This is a "dimension table" that provides context about the stocks. It is separate from the "market_prices" table which stores daily stock data.
+ */
+export const companiesInfo = pgTable("companiesInfo", {
+  symbol: text("symbol").primaryKey(), // Unique ticker (e.g., ADBL, NICA)
+  companyName: text("company_name").notNull(), // Full legal name of listed company
+  companyStatus: text("company_status"), // e.g., ACTIVE or SUSPENDED
+  companySector: text("company_sector"), // e.g., Commercial Banks, Hydropower
+  companyInstrument: text("company_instrument"), // e.g., Equity, Mutual Fund, Debenture
+  companyEmail: text("company_email"), // Official contact email address
+  companyWebsite: text("company_website"), // Official website URL
+  updatedAt: timestamp("updated_at").defaultNow(), // Last time scraper touched this row
+});
 
-// ***********************************************
+/** 2.
+ * BROKERS TABLE
+ * Stores data from: https://nepalstock.com.np
+ * Note: This is a "dimension table" that provides context about the brokers. It is separate from the "broker_trades" table which stores daily trading data linked to these brokers.
+ */
+export const brokersInfo = pgTable("brokersInfo", {
+  brokerCode: integer("broker_code").primaryKey(), // Official NEPSE ID (e.g., 58, 34, 1)
+  brokerName: text("broker_name").notNull(), // Name of the brokerage firm
+  contactPerson: text("contact_person"), // Primary contact person at firm
+  contactNumber: text("contact_number"), // Stored as text to keep leading zeros
+  status: text("status"), // Current license status (e.g., ACTIVE)
+  tmsLink: text("tms_link"), // URL for their trading platform
+  updatedAt: timestamp("updated_at").defaultNow(), // Tracking for data freshness
+});
+
+/* 3.
+  * MARKET PRICES TABLE
+  * Stores data from: https://nepalstock.com.np/stock-price
+  * Note: This is a "fact table" that captures daily stock data. It is separate from the "companiesInfo" table which provides static context about the stocks.
+  * Important: The 'symbol' and 'businessDate' fields together must be unique to prevent duplicate entries for the same stock on the same day.
+  * This table is the primary source for all stock price data in the app.
+  * The 'lastUpdated' timestamp helps us track when the scraper last updated this data, which is crucial for debugging and ensuring data freshness.
+  
+*/
+
 export const marketPrices = pgTable(
   "market_prices",
   {
@@ -96,7 +117,65 @@ export const marketPrices = pgTable(
   }),
 );
 
-// ***********************************************
+/** 4.
+ * FLOORSHEET TABLE
+ * Stores data from: https://nepalstock.com.np/floorsheet/
+ * Note: This is a "fact table" that links Brokers to Stocks to track Buy/Sell volume. It is separate from the "market_prices" table which stores daily stock data.
+ */
+
+export const floorsheet = pgTable(
+  "floorsheet",
+  {
+    id: serial("id").primaryKey(),
+    // Must be text to handle long NEPSE IDs
+    contractId: text("contract_id").notNull(), //
+    floorDate: date("floor_date").notNull(),
+    symbol: text("symbol").notNull(),
+    buyerBroker: integer("buyer_broker").notNull(),
+    sellerBroker: integer("seller_broker").notNull(),
+    quantity: integer("quantity").notNull(),
+    // Use text or numeric; Drizzle handles strings for numeric types
+    rate: numeric("rate", { precision: 12, scale: 2 }).notNull(),
+    amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    contractIdx: uniqueIndex("contract_idx").on(table.contractId),
+  }),
+);
+
+/** 5.
+ * BROKER DAILY TRADES (The Fact Table)
+ * Purpose: Links Brokers to Stocks to track Buy/Sell volume
+ */
+
+export const brokerTrades = pgTable(
+  "broker_trades",
+  {
+    id: serial("id").primaryKey(),
+    businessDate: date("business_date").notNull(),
+    brokerId: integer("broker_id").references(() => brokersInfo.brokerCode),
+    symbol: text("symbol").references(() => companiesInfo.symbol),
+    // FIX 1: Remove .check() from here. JS doesn't support it as a column method.
+    tradeType: text("trade_type").notNull(),
+    quantity: integer("quantity").notNull(),
+    totalAmount: numeric("total_amount", { precision: 20, scale: 2 }),
+  },
+  (table) => [
+    // FIX 2: Use [ ] brackets here instead of { }
+    // FIX 3: Move the check constraint here
+    check("trade_type_check", sql`${table.tradeType} IN ('BUY', 'SELL')`),
+
+    uniqueIndex("unique_trade_idx").on(
+      table.businessDate,
+      table.brokerId,
+      table.symbol,
+      table.tradeType,
+    ),
+  ], // FIX 4: Close with ]
+);
+
+// *********************************************** PORTFOLIO TABLE (For User's Stock Holdings)
 // SCHEMA FOR STORING PROTFOLIO DATA
 
 // 1. USERS TABLE (Future Proofing)

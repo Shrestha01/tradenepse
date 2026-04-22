@@ -1,6 +1,12 @@
 import { chromium } from "playwright";
 import { db } from "../db/index.js";
-import { floorsheet, marketPrices } from "../db/schema.js";
+import { sql } from "drizzle-orm";
+import {
+  floorsheet,
+  marketPrices,
+  companiesInfo,
+  brokersInfo,
+} from "../db/schema.js";
 
 export async function scrapeFloorsheet() {
   const browser = await chromium.launch({
@@ -145,10 +151,9 @@ export async function scrapeFloorsheet() {
 //****************************************************** */
 // FUNCTION TO SCRAPE TODAYS PRICE FROM NEPSE WEBSITE AND SAVE TO THE PROSTGRESQL DATABASE
 export async function scrapeTodayPrice() {
-
   // LUNCHING A BROWSER IN THE SERVER
   const browser = await chromium.launch({
-    headless: true,            // helps to run the browser on server without a proper GUI.
+    headless: true, // helps to run the browser on server without a proper GUI.
     args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"], // helps to behave like a Human when accessing a web-application by seting a flag as false to navigator.webdriver(normally this is true)
   });
   // CREATE A FRESH, ISOLATED WEB BROWSWER PROFILE.
@@ -159,7 +164,7 @@ export async function scrapeTodayPrice() {
 
   // OPENING A NEW TAB INSIDE THE BROWSWER.
   const page = await context.newPage();
-  
+
   const log = (step, message, isError = false) => {
     const timestamp = new Date().toLocaleTimeString();
     const prefix = isError ? "❌ [ERROR]" : "✅ [INFO]";
@@ -281,6 +286,260 @@ export async function scrapeTodayPrice() {
     log(
       "SUMMARY",
       `Scrape Complete. Total: ${formattedData.length}, Saved: ${savedCount}`,
+    );
+  } catch (error) {
+    log("CRITICAL", error.message, true);
+  } finally {
+    await browser.close();
+    log("SYSTEM", "Browser closed.");
+  }
+}
+
+export async function scrapeCompaniesInfo() {
+  // LUNCHING A BROWSER IN THE SERVER
+  const browser = await chromium.launch({
+    headless: true,
+    args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
+  });
+
+  // CREATE A FRESH, ISOLATED WEB BROWSER PROFILE.
+  const context = await browser.newContext({
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  });
+
+  const page = await context.newPage();
+
+  const log = (step, message, isError = false) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const prefix = isError ? "❌ [ERROR]" : "✅ [INFO]";
+    console.log(`${timestamp} ${prefix} [${step}] ${message}`);
+  };
+
+  try {
+    log("NAVIGATION", "Opening NEPSE Company List...");
+    await page.goto("https://nepalstock.com.np/company/", {
+      waitUntil: "networkidle",
+      timeout: 90000,
+    });
+
+    log("LOADING", "Waiting for table rows...");
+    await page.waitForSelector("table tbody tr td", { timeout: 30000 });
+
+    let allRawRows = [];
+    let hasNextPage = true;
+    let pageCount = 1;
+
+    // PAGINATION LOGIC: Loops through pages until the "Next" button is disabled
+    while (hasNextPage) {
+      log("PAGINATION", `Scraping Page ${pageCount}...`);
+
+      const pageRows = await page.evaluate(() => {
+        const rows = Array.from(document.querySelectorAll("table tbody tr"));
+        return rows
+          .map((row) => {
+            const cols = Array.from(row.querySelectorAll("td")).map((td) =>
+              td.innerText.trim(),
+            );
+            // Basic validation: ensures row has data and SN is a number
+            if (cols.length < 5 || isNaN(parseInt(cols[0]))) return null;
+            return cols;
+          })
+          .filter(Boolean);
+      });
+
+      allRawRows.push(...pageRows);
+
+      // Check if "Next" button exists and is not disabled
+      const nextButton = page.locator("li.pagination-next:not(.disabled) a");
+      if ((await nextButton.count()) > 0) {
+        await nextButton.click();
+        await page.waitForTimeout(2000); // Wait for table to refresh
+        pageCount++;
+      } else {
+        hasNextPage = false;
+        log("PAGINATION", "Reached the last page.");
+      }
+    }
+
+    if (allRawRows.length === 0) {
+      log("EXTRACTION", "Found 0 rows. Selectors might have changed.", true);
+      return;
+    }
+
+    // FORMATTING DATA
+    const formattedData = allRawRows.map((cols) => {
+      return {
+        symbol: cols[2], // Column 2
+        companyName: cols[1], // Column 3
+        companySector: cols[4], // Column 4
+        companyInstrument: cols[5], // Default as it's often missing in basic DOM view
+        companyStatus: cols[3] || "ACTIVE", // Status usually in column 6
+        companyEmail: cols[6], // Email usually requires clicking 'View'
+        companyWebsite: cols[7], // Website usually in column 8
+        updatedAt: new Date(),
+      };
+    });
+    //console.log(formattedData);
+
+    log("DATABASE", `Syncing ${formattedData.length} company records...`);
+    let savedCount = 0;
+
+    // BATCH INSERT/UPDATE
+    for (let i = 0; i < formattedData.length; i += 50) {
+      const batch = formattedData.slice(i, i + 50);
+      try {
+        await db
+          .insert(companiesInfo)
+          .values(batch)
+          .onConflictDoUpdate({
+            target: companiesInfo.symbol,
+            set: {
+              companyStatus: sql`EXCLUDED.company_status`,
+              updatedAt: new Date(),
+            },
+          });
+        savedCount += batch.length;
+      } catch (dbError) {
+        log("DATABASE", `Batch failed: ${dbError.message}`, true);
+      }
+    }
+
+    log(
+      "SUMMARY",
+      `Scrape Complete. Total Found: ${formattedData.length}, Synced: ${savedCount}`,
+    );
+  } catch (error) {
+    log("CRITICAL", error.message, true);
+  } finally {
+    await browser.close();
+    log("SYSTEM", "Browser closed.");
+  }
+}
+export async function scrapeBrokersInfo() {
+  // LUNCHING A BROWSER IN THE SERVER
+  const browser = await chromium.launch({
+    headless: true,
+    args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
+  });
+
+  // CREATE A FRESH, ISOLATED WEB BROWSER PROFILE.
+  const context = await browser.newContext({
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  });
+
+  const page = await context.newPage();
+
+  const log = (step, message, isError = false) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const prefix = isError ? "❌ [ERROR]" : "✅ [INFO]";
+    console.log(`${timestamp} ${prefix} [${step}] ${message}`);
+  };
+
+  try {
+    log("NAVIGATION", "Opening NEPSE Broker List...");
+    // Updated URL to the standard plural version
+    await page.goto("https://nepalstock.com.np/brokers", {
+      waitUntil: "networkidle",
+      timeout: 90000,
+    });
+
+    log("LOADING", "Waiting for broker table...");
+    // Use a slightly more flexible selector
+    await page.waitForSelector("table tbody tr", { timeout: 30000 });
+
+    let allRawRows = [];
+    let hasNextPage = true;
+    let pageCount = 1;
+
+    // PAGINATION LOGIC
+    while (hasNextPage) {
+      log("PAGINATION", `Scraping Page ${pageCount}...`);
+
+      const pageRows = await page.evaluate(() => {
+        const rows = Array.from(document.querySelectorAll("table tbody tr"));
+        return rows
+          .map((row) => {
+            const cols = Array.from(row.querySelectorAll("td")).map((td) =>
+              td.innerText.trim(),
+            );
+            // Validation: Member Code is usually at index 4, S.N at index 0
+            if (cols.length < 5 || isNaN(parseInt(cols[0]))) return null;
+            return cols;
+          })
+          .filter(Boolean);
+      });
+
+      allRawRows.push(...pageRows);
+
+      // Improved Next Button Selector (checks for text or standard class)
+      const nextButton = page
+        .locator(
+          "li.pagination-next:not(.disabled) a, a:has-text('Next'):not(.disabled)",
+        )
+        .first();
+
+      if ((await nextButton.count()) > 0 && (await nextButton.isVisible())) {
+        await nextButton.click();
+        log("PAGINATION", "Clicked Next...");
+        await page.waitForTimeout(3000); // Wait for AJAX content swap
+        pageCount++;
+      } else {
+        hasNextPage = false;
+        log("PAGINATION", "Reached last page.");
+      }
+    }
+
+    if (allRawRows.length === 0) {
+      log("EXTRACTION", "No broker rows found. Check selectors.", true);
+      return;
+    }
+
+    // FORMATTING DATA BASED ON BROKERSINFO SCHEMA
+    // NEPSE Column Order: 0:SN, 1:Name, 2:Contact, 3:Number, 4:Code, 5:Status, 6:TMS
+    const formattedData = allRawRows.map((cols) => {
+      return {
+        brokerCode: parseInt(cols[4]), // Primary Key
+        brokerName: cols[1],
+        contactPerson: cols[2] || "N/A",
+        contactNumber: cols[3] || "N/A",
+        status: cols[5] || "ACTIVE",
+        tmsLink: cols[6] || "N/A",
+        updatedAt: new Date(),
+      };
+    });
+
+    log("DATABASE", `Syncing ${formattedData.length} broker records...`);
+    let savedCount = 0;
+
+    // BATCH UPSERT
+    for (let i = 0; i < formattedData.length; i += 50) {
+      const batch = formattedData.slice(i, i + 50);
+      try {
+        await db
+          .insert(brokersInfo)
+          .values(batch)
+          .onConflictDoUpdate({
+            target: brokersInfo.brokerCode,
+            set: {
+              brokerName: sql`EXCLUDED.broker_name`,
+              status: sql`EXCLUDED.status`,
+              contactNumber: sql`EXCLUDED.contact_number`,
+              contactPerson: sql`EXCLUDED.contact_person`,
+              tmsLink: sql`EXCLUDED.tms_link`,
+              updatedAt: new Date(),
+            },
+          });
+        savedCount += batch.length;
+      } catch (dbError) {
+        log("DATABASE", `Batch failed: ${dbError.message}`, true);
+      }
+    }
+
+    log(
+      "SUMMARY",
+      `Complete. Found: ${formattedData.length}, Synced: ${savedCount}`,
     );
   } catch (error) {
     log("CRITICAL", error.message, true);

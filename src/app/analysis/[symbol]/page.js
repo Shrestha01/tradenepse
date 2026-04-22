@@ -13,6 +13,7 @@ export default async function AnalysisPage({ params }) {
   const { symbol } = await params;
   const { buyers, sellers } = await getBrokerStats(symbol); // Fetch broker stats for the given symbol
   const stockDetails = await getStockDetails(symbol); // Fetch stock details for the header
+  console.log("Stock Details:", stockDetails); // Debug log
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8">
       <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
