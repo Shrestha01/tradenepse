@@ -3,7 +3,7 @@ import { scrapeFloorsheet, scrapeTodayPrice } from "@/scripts/scrape";
 
 export async function GET() {
   try {
-    await scrapeFloorsheet();
+    //await scrapeFloorsheet();
     await scrapeTodayPrice();
   } catch (error) {
     console.error("Error during scraping:", error);
