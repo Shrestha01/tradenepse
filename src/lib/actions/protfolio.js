@@ -6,8 +6,12 @@ import { eq, desc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/dist/server/api-utils";
+import { connection } from "next/server"; // Step 1: Add this import
 
 //const TEMP_USER_ID = "92743246-c69b-45ae-804e-458783f12ec8";
+
+await connection();
+
 const { userId } = await auth();
 // 1. Updated Action to handle both BUY and SELL
 export async function addStock(formData) {

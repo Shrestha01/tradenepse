@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import AddStockForm from "@/components/portfolio/AddStockForm";
 import SummaryDashboard from "@/components/portfolio/SummaryDashboard";
 import SummaryTable from "@/components/portfolio/SummaryTable";
