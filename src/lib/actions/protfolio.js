@@ -6,7 +6,6 @@ import { eq, desc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/dist/server/api-utils";
-export const dynamic = "force-dynamic";
 
 //const TEMP_USER_ID = "92743246-c69b-45ae-804e-458783f12ec8";
 const { userId } = await auth();
