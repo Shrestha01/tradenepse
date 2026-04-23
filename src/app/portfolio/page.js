@@ -1,6 +1,7 @@
 import AddStockForm from "@/components/portfolio/AddStockForm";
 import SummaryDashboard from "@/components/portfolio/SummaryDashboard";
 import SummaryTable from "@/components/portfolio/SummaryTable";
+export const dynamic = "force-dynamic";
 
 export default async function PortfolioPage() {
   return (
