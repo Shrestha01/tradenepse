@@ -16,7 +16,7 @@ export default async function Home() {
 
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-400">
-            Analyze the Market <br /> Like a Professional.
+            AAnalyze the Market <br /> Like a Professional.
           </h1>
           <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
             Real-time floorsheet analytics, broker tracking, and portfolio
