@@ -8,10 +8,11 @@ import {
 
 export async function GET() {
   try {
+    await scrapeTodayPrice();
+    await scrapeCompaniesInfo();
+    await scrapeBrokersInfo();
      await scrapeFloorsheet();
-    // await scrapeTodayPrice();
-    //await scrapeCompaniesInfo();
-    //await scrapeBrokersInfo();
+    
   } catch (error) {
     console.error("Error during scraping:", error);
   }
