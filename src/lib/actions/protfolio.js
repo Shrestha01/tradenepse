@@ -4,11 +4,18 @@ import { db } from "@/db/index";
 import { portfolio, marketPrices } from "@/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/dist/server/api-utils";
 
-const TEMP_USER_ID = "92743246-c69b-45ae-804e-458783f12ec8";
-
+//const TEMP_USER_ID = "92743246-c69b-45ae-804e-458783f12ec8";
+const { userId } = await auth();
 // 1. Updated Action to handle both BUY and SELL
 export async function addStock(formData) {
+  // Grab the logged-in User ID
+  if (!userId) {
+    redirect("/"); // If not authenticated, redirect to home/login page
+  }
+
   const symbol = formData.get("symbol").toUpperCase();
   const quantity = parseInt(formData.get("quantity"));
   const avgCost = parseFloat(formData.get("avgCost"));
@@ -19,7 +26,7 @@ export async function addStock(formData) {
   const transactionValue = (quantity * avgCost).toFixed(2);
 
   await db.insert(portfolio).values({
-    userId: TEMP_USER_ID,
+    userId: userId,
     symbol,
     quantity,
     avgCostPrice: avgCost.toString(),
@@ -34,7 +41,7 @@ export async function addStock(formData) {
 export async function deleteStock(id) {
   await db
     .delete(portfolio)
-    .where(and(eq(portfolio.id, id), eq(portfolio.userId, TEMP_USER_ID)));
+    .where(and(eq(portfolio.id, id), eq(portfolio.userId, userId)));
 
   revalidatePath("/portfolio");
 }
@@ -45,7 +52,7 @@ export async function getPortfolioData() {
     const rawTransactions = await db
       .select()
       .from(portfolio)
-      .where(eq(portfolio.userId, TEMP_USER_ID));
+      .where(eq(portfolio.userId, userId));
 
     const groupedMap = new Map();
 

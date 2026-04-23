@@ -4,7 +4,7 @@ import SummaryTable from "@/components/portfolio/SummaryTable";
 
 export default async function PortfolioPage() {
   return (
-    <main className="min-h-screen bg-slate-950 text-white p-8">
+    <main className="min-h-screen bg-slate-950 text-white p-8 py-20">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold mb-8">My Portfolio</h1>
 

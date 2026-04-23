@@ -16,7 +16,7 @@ export default async function AnalysisPage({ params }) {
   console.log("Stock Details:", stockDetails); // Debug log
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
+      <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 mb-8 py-12">
         <div className="flex items-center gap-4">
           <Link
             href="/"
@@ -28,9 +28,7 @@ export default async function AnalysisPage({ params }) {
         </div>
         <SymbolSearch />
       </div>
-
       <StockDetail stockDetails={stockDetails} />
-
       <div className="max-w-4xl mx-auto">
         {/* Pass data to the Client Component */}
         <BrokerAnalysisTabs buyers={buyers} sellers={sellers} symbol={symbol} />
